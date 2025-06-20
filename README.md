@@ -1,6 +1,6 @@
 # 📊 Speech Spectrum Analyzer
 
-Esta es una herramienta web construida con Streamlit que analiza la frecuencia de una palabra dentro de un texto y muestra su espectro FFT.
+Esta herramienta web construida con Streamlit analiza las palabras más repetidas en un texto y visualiza su espectro FFT.
 
 ## 🧰 Cómo ejecutar localmente
 
