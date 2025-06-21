@@ -8,7 +8,7 @@ from docx import Document
 
 def limpiar_y_tokenizar(texto):
     texto = texto.lower()
-    caracteres_invalidos = '.,;:"'!?¿¡\n'
+    caracteres_invalidos = ".,;:'"!?¿¡\n"
     for c in caracteres_invalidos:
         texto = texto.replace(c, ' ')
     palabras = texto.split()
