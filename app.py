@@ -7,7 +7,7 @@ from fpdf import FPDF
 from docx import Document
 import speech_recognition as sr
 import tempfile
-import base64
+import os
 
 def limpiar_y_tokenizar(texto):
     texto = texto.lower()
@@ -38,18 +38,18 @@ def generar_senal_con_palabras(mas, menos):
     return x, senal, etiquetas, puntos_por_etiqueta
 
 def exportar_pdf(fig):
-    buffer = BytesIO()
-    fig.savefig(buffer, format="png")
-    buffer.seek(0)
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Análisis de Espectro de Texto", ln=True, align='C')
-    pdf.image(buffer, x=10, y=30, w=180)
-    pdf_output = BytesIO()
-    pdf.output(pdf_output)
-    pdf_output.seek(0)
-    return pdf_output
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+        fig.savefig(tmpfile.name)
+        tmpfile.flush()
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="Análisis de Espectro de Texto", ln=True, align='C')
+        pdf.image(tmpfile.name, x=10, y=30, w=180)
+        output = BytesIO()
+        pdf.output(output)
+        output.seek(0)
+    return output
 
 def exportar_word(mas, menos):
     doc = Document()
@@ -106,6 +106,19 @@ if st.button("🔍 Analizar"):
         mas, menos = obtener_frecuencias(palabras)
         x, senal, etiquetas, step = generar_senal_con_palabras(mas, menos)
 
+        # Mostrar listas visuales
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("🔝 Palabras más frecuentes")
+            for palabra, freq in mas:
+                st.write(f"{palabra}: {freq}")
+        with col2:
+            st.subheader("🔻 Palabras menos frecuentes")
+            for palabra, freq in menos:
+                st.write(f"{palabra}: {freq}")
+
+        # Gráfica senoidal
+        st.subheader("📈 Gráfica Senoidal de Frecuencia de Palabras")
         fig, ax = plt.subplots(figsize=(14, 6))
         ax.plot(x, senal)
         for i in range(0, len(etiquetas), step):
@@ -118,6 +131,18 @@ if st.button("🔍 Analizar"):
         ax.grid(True)
         st.pyplot(fig)
 
+        # Análisis FFT del espectro
+        st.subheader("🎼 Espectro de Frecuencia (FFT)")
+        senal_fft = np.abs(np.fft.fft(senal))
+        fig_fft, ax_fft = plt.subplots(figsize=(14, 4))
+        ax_fft.plot(senal_fft)
+        ax_fft.set_title("Transformada de Fourier del Espectro de Palabras")
+        ax_fft.set_xlabel("Frecuencia")
+        ax_fft.set_ylabel("Magnitud")
+        ax_fft.grid(True)
+        st.pyplot(fig_fft)
+
+        # Descargas
         col1, col2 = st.columns(2)
         with col1:
             pdf_file = exportar_pdf(fig)
