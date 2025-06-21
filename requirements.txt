@@ -3,3 +3,5 @@ numpy
 matplotlib
 fpdf
 python-docx
+SpeechRecognition
+pydub

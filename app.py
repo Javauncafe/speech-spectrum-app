@@ -5,10 +5,13 @@ from collections import Counter
 from io import BytesIO
 from fpdf import FPDF
 from docx import Document
+import speech_recognition as sr
+import tempfile
+import base64
 
 def limpiar_y_tokenizar(texto):
     texto = texto.lower()
-    caracteres_invalidos = ".,;:'"!?¿¡\n"
+    caracteres_invalidos = ".,;:\'\"!?¿¡\n"
     for c in caracteres_invalidos:
         texto = texto.replace(c, ' ')
     palabras = texto.split()
@@ -62,15 +65,42 @@ def exportar_word(mas, menos):
     word_output.seek(0)
     return word_output
 
+def transcribir_audio(audio_bytes):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(audio_bytes)
+        tmp_path = tmp.name
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(tmp_path) as source:
+        audio_data = recognizer.record(source)
+        try:
+            texto = recognizer.recognize_google(audio_data, language="es-ES")
+            return texto
+        except sr.UnknownValueError:
+            return ""
+        except sr.RequestError:
+            return "Error de conexión con el servicio de reconocimiento de voz."
+
 # Interfaz Streamlit
 st.set_page_config(layout="wide")
 st.title("📊 Analizador de Espectro de Texto con Senoides")
 
-texto = st.text_area("Ingresa o pega tu texto aquí:", height=300)
+modo = st.radio("Selecciona el modo de entrada:", ["Texto manual", "Subir audio (voz)"])
 
-if st.button("🔍 Analizar texto"):
+texto = ""
+
+if modo == "Texto manual":
+    texto = st.text_area("Ingresa o pega tu texto aquí:", height=300)
+else:
+    audio_file = st.file_uploader("Sube un archivo de audio (.wav):", type=["wav"])
+    if audio_file is not None:
+        with st.spinner("Transcribiendo audio..."):
+            texto = transcribir_audio(audio_file.read())
+        st.success("Transcripción completada:")
+        st.write(texto)
+
+if st.button("🔍 Analizar"):
     if texto.strip() == "":
-        st.warning("Por favor, ingresa un texto.")
+        st.warning("Por favor, ingresa texto o sube un audio válido.")
     else:
         palabras = limpiar_y_tokenizar(texto)
         mas, menos = obtener_frecuencias(palabras)
